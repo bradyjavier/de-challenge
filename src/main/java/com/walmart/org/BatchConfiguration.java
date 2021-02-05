@@ -146,7 +146,7 @@ public class BatchConfiguration {
 	public JdbcBatchItemWriter<Console> writerLoadConsole(DataSource dataSource){
 		JdbcBatchItemWriter<Console> itemWriter = new JdbcBatchItemWriter<>();
 		itemWriter.setDataSource(dataSource);
-		itemWriter.setSql("INSERT INTO Console (NameConsole, Company_ID) VALUES (:NameConsole, "
+		itemWriter.setSql("INSERT INTO Console (NameConsole, CompanyID) VALUES (:NameConsole, "
 				+ "(SELECT Company_ID FROM Company WHERE NameCompany = :Company) ) ");
 		itemWriter.setItemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<>());
 		return itemWriter;

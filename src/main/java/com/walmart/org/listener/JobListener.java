@@ -40,7 +40,7 @@ public class JobListener extends JobExecutionListenerSupport {
 			.forEach(_Company -> LOG.info("Company < " + _Company + " >"));
 
 			jdbcTemplate
-					.query("SELECT ConsoleID, NameConsole, Company_ID FROM Console",
+					.query("SELECT ConsoleID, NameConsole, CompanyID FROM Console",
 							(rs, row) -> new Console(rs.getInt(1), rs.getString(2) , rs.getString(3) ))
 					.forEach(_console -> LOG.info("Console < " + _console + " >"));
 			
