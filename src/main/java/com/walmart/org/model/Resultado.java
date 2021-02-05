@@ -16,6 +16,7 @@ public class Resultado {
 	private float UserScore_convert;
 	private Date Fecha_convert;
 	
+	
 	public Resultado() {
 		super();
 		// TODO Auto-generated constructor stub

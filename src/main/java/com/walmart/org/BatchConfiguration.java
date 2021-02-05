@@ -39,6 +39,8 @@ import com.walmart.org.processor.ConsoleProcessor;
 import com.walmart.org.processor.ResulItemProcessor;
 import com.walmart.org.processor.ResultConvertItemProcessor;
 
+import com.walmart.org.processor.TESTPROCESSOR;
+
 
 @Configuration
 @EnableBatchProcessing
@@ -240,7 +242,8 @@ public class BatchConfiguration {
 													  Step LoadGame, 
 													  Step LoadResult, 
 													  Step CreateFileBestAllConsole, 
-													  Step CreateFileWorstAllConsole) {
+													  Step CreateFileWorstAllConsole,
+													  Step TEST) {
 		return jobBuilderFactory.get("importConsoleJob")
 				.incrementer(new RunIdIncrementer())
 				.listener(listener)
@@ -250,6 +253,7 @@ public class BatchConfiguration {
 				.next(LoadResult)
 				.next(CreateFileBestAllConsole)
 				.next(CreateFileWorstAllConsole)
+				.next(TEST)
 				.build();
 	}
 	
@@ -316,6 +320,76 @@ public class BatchConfiguration {
 	
 	}
 	
+	
+	
+	@Bean
+	public Step TEST() {
+		
+		return stepBuilderFactory.get("step7")
+				.<BestGameALLConsole, BestGameALLConsole> chunk(1000)
+				.reader(TESTitemReader(dataSource))
+			//	.processor(TESTPRO())
+				.writer(TESTwriter())
+				.build();
+	} 
+	
+	private Resource TESTTOP = new FileSystemResource("data/TESTBYCONSOLE.csv");
+	
+	@Bean
+	public ItemReader<BestGameALLConsole> TESTitemReader(DataSource dataSource) {
+
+	        return new JdbcCursorItemReaderBuilder<BestGameALLConsole>()
+	                .name("cursorItemReader")
+	                .dataSource(dataSource)
+	                .sql("SELECT Metascore, NameGame, NameConsole, Userscore, Fecha, NameCompany, Rank FROM ( "
+	                		+ "SELECT Metascore, NameGame, NameConsole, Userscore, Fecha, NameCompany, "
+	                		+ "(Select 1 + Count(*) From Result  Where Console_ID = A.Console_ID AND ResultID < A.ResultID) Rank FROM Result A "
+	                		+ "INNER JOIN Console ON "
+	                		+ "A.Console_ID = Console.ConsoleID "
+	                		+ "INNER JOIN Game ON "
+	                		+ "A.NameGame_ID = Game.NameGameID "
+	                		+ "INNER JOIN Company ON "
+	                		+ "Console.CompanyID = Company.Company_ID "
+	                		+ "ORDER BY Metascore DESC "
+	                		+ ") WHERE  Rank<=10 "    		
+	                		)
+	            
+	                .rowMapper(new BeanPropertyRowMapper<>(BestGameALLConsole.class))
+	                .build();
+	 }
+	
+	public FlatFileItemWriter<BestGameALLConsole> TESTwriter() 
+    {
+        FlatFileItemWriter<BestGameALLConsole> writer = new FlatFileItemWriter<>();
+  
+        writer.setResource(TESTTOP);
+        writer.setAppendAllowed(false);
+        writer.setLineAggregator(new DelimitedLineAggregator<BestGameALLConsole>() {
+            {
+                setDelimiter(",");
+                setFieldExtractor(new BeanWrapperFieldExtractor<BestGameALLConsole>() {
+                    {
+                        setNames(new String[] {  "Metascore", "NameGame","NameConsole", "Userscore", "NameCompany", "Fecha" });
+                    }
+                });
+            }
+        });
+        
+        writer.setHeaderCallback(new FlatFileHeaderCallback() {
+			@Override
+			public void writeHeader(Writer writer) throws IOException {
+				 writer.write("Metascore,NameGame,NameConsole,Userscore,NameCompany,Fecha");
+				
+			}
+        });
+        
+        return writer;
+    }
+	
+	@Bean
+	public TESTPROCESSOR TESTPRO() {
+		return new TESTPROCESSOR();
+	}
 	
 }
 	
