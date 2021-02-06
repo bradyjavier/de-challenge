@@ -33,10 +33,56 @@ Userscore 	DECIMAL(10,1),
 Fecha		DATE,
 FOREIGN KEY (NameGame_ID) REFERENCES GAME(NameGameID),
 FOREIGN KEY (Console_ID) REFERENCES Console(ConsoleID)
-)
+);
+
+CREATE VIEW V_RESULT_BEST AS 
+
+SELECT  Row_number() over() RN,
+		Metascore, 
+		REPLACE(NameGame,',','.') NameGame, 
+		NameConsole, 
+		Console_ID,
+		Userscore, 
+		Fecha,
+		NameCompany
+	    FROM  
+	    	(SELECT  Metascore, 
+	    			 NameGame_ID, 
+	    			 Console_ID, 
+	    			 Userscore, 
+	    			 Fecha
+	    			 FROM Result ORDER BY Metascore DESC ) A 
+	    INNER JOIN Console 
+	    ON A.Console_ID = Console.ConsoleID
+	    INNER JOIN Game 
+	    ON A.NameGame_ID = Game.NameGameID
+	    INNER JOIN Company
+	    ON Console.CompanyID = Company.Company_ID 
 
 
+CREATE VIEW V_RESULT_WORST AS 
 
+SELECT  Row_number() over() RN,
+		Metascore, 
+		REPLACE(NameGame,',','.') NameGame, 
+		NameConsole, 
+		Console_ID,
+		Userscore, 
+		Fecha,
+		NameCompany
+	    FROM  
+	    	(SELECT  Metascore, 
+	    			 NameGame_ID, 
+	    			 Console_ID, 
+	    			 Userscore, 
+	    			 Fecha
+	    			 FROM Result ORDER BY Metascore ASC ) A 
+	    INNER JOIN Console 
+	    ON A.Console_ID = Console.ConsoleID
+	    INNER JOIN Game 
+	    ON A.NameGame_ID = Game.NameGameID
+	    INNER JOIN Company
+	    ON Console.CompanyID = Company.Company_ID 
 
 
 

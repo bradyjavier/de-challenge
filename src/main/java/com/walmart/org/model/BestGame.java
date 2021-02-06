@@ -1,8 +1,9 @@
 package com.walmart.org.model;
 
+import java.text.SimpleDateFormat;
 import java.util.Date;
 
-public class BestGameALLConsole {
+public class BestGame {
 
 	private int Metascore;
 	private String NameConsole;
@@ -12,7 +13,8 @@ public class BestGameALLConsole {
 	private int RANK;
 	private String NameCompany;
 	
-	public BestGameALLConsole(int metascore, String nameConsole, String nameGame, float userscore, Date fecha, int rANK,
+	
+	public BestGame(int metascore, String nameConsole, String nameGame, float userscore, Date fecha, int rANK,
 			String nameCompany) {
 		super();
 		Metascore = metascore;
@@ -23,7 +25,7 @@ public class BestGameALLConsole {
 		RANK = rANK;
 		NameCompany = nameCompany;
 	}
-	public BestGameALLConsole() {
+	public BestGame() {
 		super();
 		// TODO Auto-generated constructor stub
 	}

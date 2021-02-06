@@ -10,7 +10,6 @@ import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.database.builder.JdbcCursorItemReaderBuilder;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.batch.item.file.FlatFileItemWriter;
-
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
@@ -32,14 +31,12 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import com.walmart.org.listener.JobListener;
-import com.walmart.org.model.BestGameALLConsole;
+import com.walmart.org.model.BestGame;
 import com.walmart.org.model.Console;
 import com.walmart.org.model.Resultado;
 import com.walmart.org.processor.ConsoleProcessor;
 import com.walmart.org.processor.ResulItemProcessor;
 import com.walmart.org.processor.ResultConvertItemProcessor;
-
-import com.walmart.org.processor.TESTPROCESSOR;
 
 
 @Configuration
@@ -55,9 +52,10 @@ public class BatchConfiguration {
 	
 	private Resource FileConsole = new FileSystemResource("data/consoles.csv");
 	private Resource FileResult= new FileSystemResource("data/result.csv");
-	private Resource Top10BestConsoles = new FileSystemResource("data/The_Top_10_best_games_for_all_consoles.csv");
-	private Resource Top10worstConsoles = new FileSystemResource("data/The_Top_10_worst_games_for_all_consoles.csv");
-	
+	private Resource Top10BestConsoles = new FileSystemResource("data/Top_10_best_games_for_all_consoles.csv");
+	private Resource Top10worstConsoles = new FileSystemResource("data/Top_10_worst_games_for_all_consoles.csv");
+	private Resource BestGameForConsole = new FileSystemResource("data/Best_games_for_consoles.csv");
+	private Resource WorsrGameForConsole = new FileSystemResource("data/Worst_games_for_consoles.csv");
 	
 	@Bean
 	public FlatFileItemReader<Console> readerFileConsole(){
@@ -93,8 +91,8 @@ public class BatchConfiguration {
 	}
 	
 	@Bean
-	public ItemReader<BestGameALLConsole> itemReaderFileBestAllConsole(DataSource dataSource) {
-	        return new JdbcCursorItemReaderBuilder<BestGameALLConsole>()
+	public ItemReader<BestGame> itemReaderFileBestAllConsole(DataSource dataSource) {
+	        return new JdbcCursorItemReaderBuilder<BestGame>()
 	                .name("cursorItemReader")
 	                .dataSource(dataSource)
 	                .sql("SELECT TOP 10 Metascore, NameGame, NameConsole, Userscore, Fecha  FROM Result "
@@ -102,16 +100,16 @@ public class BatchConfiguration {
 	                		+ "Result.Console_ID = Console.ConsoleID "
 	                		+ "INNER JOIN Game ON "
 	                		+ "Result.NameGame_ID = Game.NameGameID "
-	                		+ "ORDER BY Metascore DESC "
+	                		+ "ORDER BY Metascore DESC, Userscore DESC "
 	                		)
-	                .rowMapper(new BeanPropertyRowMapper<>(BestGameALLConsole.class))
+	                .rowMapper(new BeanPropertyRowMapper<>(BestGame.class))
 	                .build();
 	 }
 	
 	@Bean
-	public ItemReader<BestGameALLConsole> itemReaderFileWorstAllConsole(DataSource dataSource) {
+	public ItemReader<BestGame> itemReaderFileWorstAllConsole(DataSource dataSource) {
 
-	        return new JdbcCursorItemReaderBuilder<BestGameALLConsole>()
+	        return new JdbcCursorItemReaderBuilder<BestGame>()
 	                .name("cursorItemReader")
 	                .dataSource(dataSource)
 	                .sql("SELECT TOP 10 Metascore, NameGame, NameConsole, Userscore, Fecha FROM Result "
@@ -119,9 +117,41 @@ public class BatchConfiguration {
 	                		+ "Result.Console_ID = Console.ConsoleID "
 	                		+ "INNER JOIN Game ON "
 	                		+ "Result.NameGame_ID = Game.NameGameID "
-	                		+ "ORDER BY Metascore ASC "
+	                		+ "ORDER BY Metascore ASC , Userscore ASC "
 	                		)
-	                .rowMapper(new BeanPropertyRowMapper<>(BestGameALLConsole.class))
+	                .rowMapper(new BeanPropertyRowMapper<>(BestGame.class))
+	                .build();
+	 }
+	
+	@Bean
+	public ItemReader<BestGame> itemReaderFileBestForConsole(DataSource dataSource) {
+
+	        return new JdbcCursorItemReaderBuilder<BestGame>()
+	                .name("cursorItemReader")
+	                .dataSource(dataSource)
+	                .sql("SELECT Metascore, NameGame, NameConsole,NameCompany, Userscore, Fecha  FROM ("
+	                		+ "SELECT Metascore, NameGame, NameConsole, Userscore, Fecha, NameCompany, "
+	                		+ "(Select 1 + Count(*) From V_RESULT_BEST  Where Console_ID = A.Console_ID AND RN < A.RN) RANK FROM  V_RESULT_BEST A ) "
+	                		+ "WHERE RANK<=10 ORDER BY NameConsole DESC, Metascore DESC"
+	                		)
+	            
+	                .rowMapper(new BeanPropertyRowMapper<>(BestGame.class))
+	                .build();
+	 }
+	
+	@Bean
+	public ItemReader<BestGame> itemReaderFileWorstForConsole(DataSource dataSource) {
+
+	        return new JdbcCursorItemReaderBuilder<BestGame>()
+	                .name("cursorItemReader")
+	                .dataSource(dataSource)
+	                .sql("SELECT Metascore, NameGame, NameConsole,NameCompany, Userscore, Fecha  FROM ("
+	                		+ "SELECT Metascore, NameGame, NameConsole, Userscore, Fecha, NameCompany, "
+	                		+ "(Select 1 + Count(*) From V_RESULT_WORST  Where Console_ID = A.Console_ID AND RN < A.RN) RANK FROM  V_RESULT_WORST A ) "
+	                		+ "WHERE RANK<=10 ORDER BY NameConsole DESC, Metascore ASC"
+	                		)
+	            
+	                .rowMapper(new BeanPropertyRowMapper<>(BestGame.class))
 	                .build();
 	 }
 	
@@ -155,18 +185,18 @@ public class BatchConfiguration {
 	} 
 	
 	@Bean
-	public FlatFileItemWriter<BestGameALLConsole> writerFileBestAllConsole() 
+	public FlatFileItemWriter<BestGame> writerFileBestAllConsole() 
 	    {
-	        FlatFileItemWriter<BestGameALLConsole> writer = new FlatFileItemWriter<>();
+	        FlatFileItemWriter<BestGame> writer = new FlatFileItemWriter<>();
 	  
 	        writer.setResource(Top10BestConsoles);
 	        writer.setAppendAllowed(false);
-	        writer.setLineAggregator(new DelimitedLineAggregator<BestGameALLConsole>() {
+	        writer.setLineAggregator(new DelimitedLineAggregator<BestGame>() {
 	            {
 	                setDelimiter(",");
-	                setFieldExtractor(new BeanWrapperFieldExtractor<BestGameALLConsole>() {
+	                setFieldExtractor(new BeanWrapperFieldExtractor<BestGame>() {
 	                    {
-	                        setNames(new String[] { "Metascore", "NameGame","NameConsole", "Userscore", "Fecha"  });
+	                        setNames(new String[] {"NameConsole","NameGame","Metascore", "Userscore", "Fecha"});
 	                    }
 	                });
 	            }
@@ -176,25 +206,25 @@ public class BatchConfiguration {
 	        writer.setHeaderCallback(new FlatFileHeaderCallback() {
 				@Override
 				public void writeHeader(Writer writer) throws IOException {
-					 writer.write("Metascore,NameGame,NameConsole,Userscore,Fecha ");
+					 writer.write("NameConsole,NameGame,Metascore,Userscore,Fecha");
 					
 				}
 	        });
 	        return writer;
 	    }
 	
-	public FlatFileItemWriter<BestGameALLConsole> writerFileWorstConsole() 
+	public FlatFileItemWriter<BestGame> writerFileWorstConsole() 
     {
-        FlatFileItemWriter<BestGameALLConsole> writer = new FlatFileItemWriter<>();
+        FlatFileItemWriter<BestGame> writer = new FlatFileItemWriter<>();
   
         writer.setResource(Top10worstConsoles);
         writer.setAppendAllowed(false);
-        writer.setLineAggregator(new DelimitedLineAggregator<BestGameALLConsole>() {
+        writer.setLineAggregator(new DelimitedLineAggregator<BestGame>() {
             {
                 setDelimiter(",");
-                setFieldExtractor(new BeanWrapperFieldExtractor<BestGameALLConsole>() {
+                setFieldExtractor(new BeanWrapperFieldExtractor<BestGame>() {
                     {
-                        setNames(new String[] { "Metascore", "NameGame","NameConsole", "Userscore", "Fecha" });
+                        setNames(new String[] {"NameConsole","NameGame","Metascore", "Userscore", "Fecha" });
                     }
                 });
             }
@@ -204,7 +234,7 @@ public class BatchConfiguration {
         writer.setHeaderCallback(new FlatFileHeaderCallback() {
 			@Override
 			public void writeHeader(Writer writer) throws IOException {
-				 writer.write("Metascore,NameGame,NameConsole,Userscore,Fecha");
+				 writer.write("NameConsole,NameGame,Metascore,Userscore,Fecha");
 				
 			}
         });
@@ -236,14 +266,71 @@ public class BatchConfiguration {
 		return itemWriter;
 	} 
 	
+	public FlatFileItemWriter<BestGame> writerFileBestForConsole() 
+    {
+        FlatFileItemWriter<BestGame> writer = new FlatFileItemWriter<>();
+  
+        writer.setResource(BestGameForConsole);
+        writer.setAppendAllowed(false);
+        writer.setLineAggregator(new DelimitedLineAggregator<BestGame>() {
+            {
+                setDelimiter(",");
+                setFieldExtractor(new BeanWrapperFieldExtractor<BestGame>() {
+                    {
+                        setNames(new String[] {"NameCompany","NameConsole","NameGame","Metascore","Userscore", "Fecha"});
+                    }
+                });
+            }
+        });
+        
+        writer.setHeaderCallback(new FlatFileHeaderCallback() {
+			@Override
+			public void writeHeader(Writer writer) throws IOException {
+				 writer.write("NameCompany,NameConsole,NameGame,Metascore,Userscore,Fecha");
+				
+			}
+        });
+        
+        return writer;
+    }
+	
+	public FlatFileItemWriter<BestGame> writerFileWorstForConsole() 
+    {
+        FlatFileItemWriter<BestGame> writer = new FlatFileItemWriter<>();
+  
+        writer.setResource(WorsrGameForConsole);
+        writer.setAppendAllowed(false);
+        writer.setLineAggregator(new DelimitedLineAggregator<BestGame>() {
+            {
+                setDelimiter(",");
+                setFieldExtractor(new BeanWrapperFieldExtractor<BestGame>() {
+                    {
+                        setNames(new String[] {"NameCompany","NameConsole","NameGame","Metascore","Userscore", "Fecha"});
+                    }
+                });
+            }
+        });
+        
+        writer.setHeaderCallback(new FlatFileHeaderCallback() {
+			@Override
+			public void writeHeader(Writer writer) throws IOException {
+				 writer.write("NameCompany,NameConsole,NameGame,Metascore,Userscore,Fecha");
+				
+			}
+        });
+        
+        return writer;
+    }
+	
 	@Bean
-	public Job JobProcessorCSV(JobListener listener, Step LoadCompany,
+	public Job JobProcessorCSV(JobListener listener,  Step LoadCompany,
 													  Step LoadConsole, 
 													  Step LoadGame, 
 													  Step LoadResult, 
 													  Step CreateFileBestAllConsole, 
 													  Step CreateFileWorstAllConsole,
-													  Step TEST) {
+													  Step CreateFileBestGameForConsole,
+													  Step CreateFileWorstGameForConsole) {
 		return jobBuilderFactory.get("importConsoleJob")
 				.incrementer(new RunIdIncrementer())
 				.listener(listener)
@@ -253,14 +340,15 @@ public class BatchConfiguration {
 				.next(LoadResult)
 				.next(CreateFileBestAllConsole)
 				.next(CreateFileWorstAllConsole)
-				.next(TEST)
+				.next(CreateFileBestGameForConsole)
+				.next(CreateFileWorstGameForConsole)
 				.build();
 	}
 	
 	@Bean
 	public Step LoadCompany() {
 		return stepBuilderFactory.get("LoadCompany")
-				.<Console, Console> chunk(10)
+				.<Console, Console> chunk(100)
 				.reader(readerFileConsole())
 		    	.processor(processorLoadCompany())
 				.writer(writerLoadCompany(dataSource))
@@ -271,7 +359,7 @@ public class BatchConfiguration {
 	public Step LoadConsole() {
 
 		return stepBuilderFactory.get("LoadConsole")
-				.<Console, Console> chunk(10)
+				.<Console, Console> chunk(100)
 				.reader(readerFileConsole())
 				.writer(writerLoadConsole(dataSource))
 				.build();
@@ -302,7 +390,7 @@ public class BatchConfiguration {
 	public Step CreateFileBestAllConsole() throws Exception {
 
 		return stepBuilderFactory.get("step5")
-				.<BestGameALLConsole, BestGameALLConsole> chunk(1000)
+				.<BestGame, BestGame> chunk(1000)
 				.reader(itemReaderFileBestAllConsole(dataSource))
 				.writer(writerFileBestAllConsole())
 				.build();
@@ -313,83 +401,33 @@ public class BatchConfiguration {
 	public Step CreateFileWorstAllConsole() throws Exception {
 
 		return stepBuilderFactory.get("step6")
-				.<BestGameALLConsole, BestGameALLConsole> chunk(1000)
+				.<BestGame, BestGame> chunk(1000)
 				.reader(itemReaderFileWorstAllConsole(dataSource))
 				.writer(writerFileWorstConsole())
 				.build();
 	
 	}
 	
-	
-	
 	@Bean
-	public Step TEST() {
+	public Step CreateFileBestGameForConsole() {
 		
 		return stepBuilderFactory.get("step7")
-				.<BestGameALLConsole, BestGameALLConsole> chunk(1000)
-				.reader(TESTitemReader(dataSource))
-			//	.processor(TESTPRO())
-				.writer(TESTwriter())
+				.<BestGame, BestGame> chunk(1000)
+				.reader(itemReaderFileBestForConsole(dataSource))
+				.writer(writerFileBestForConsole())
 				.build();
 	} 
 	
-	private Resource TESTTOP = new FileSystemResource("data/TESTBYCONSOLE.csv");
-	
 	@Bean
-	public ItemReader<BestGameALLConsole> TESTitemReader(DataSource dataSource) {
-
-	        return new JdbcCursorItemReaderBuilder<BestGameALLConsole>()
-	                .name("cursorItemReader")
-	                .dataSource(dataSource)
-	                .sql("SELECT Metascore, NameGame, NameConsole, Userscore, Fecha, NameCompany, Rank FROM ( "
-	                		+ "SELECT Metascore, NameGame, NameConsole, Userscore, Fecha, NameCompany, "
-	                		+ "(Select 1 + Count(*) From Result  Where Console_ID = A.Console_ID AND ResultID < A.ResultID) Rank FROM Result A "
-	                		+ "INNER JOIN Console ON "
-	                		+ "A.Console_ID = Console.ConsoleID "
-	                		+ "INNER JOIN Game ON "
-	                		+ "A.NameGame_ID = Game.NameGameID "
-	                		+ "INNER JOIN Company ON "
-	                		+ "Console.CompanyID = Company.Company_ID "
-	                		+ "ORDER BY Metascore DESC "
-	                		+ ") WHERE  Rank<=10 "    		
-	                		)
-	            
-	                .rowMapper(new BeanPropertyRowMapper<>(BestGameALLConsole.class))
-	                .build();
-	 }
+	public Step CreateFileWorstGameForConsole() {
+		
+		return stepBuilderFactory.get("step8")
+				.<BestGame, BestGame> chunk(1000)
+				.reader(itemReaderFileWorstForConsole(dataSource))
+				.writer(writerFileWorstForConsole())
+				.build();
+	} 
 	
-	public FlatFileItemWriter<BestGameALLConsole> TESTwriter() 
-    {
-        FlatFileItemWriter<BestGameALLConsole> writer = new FlatFileItemWriter<>();
-  
-        writer.setResource(TESTTOP);
-        writer.setAppendAllowed(false);
-        writer.setLineAggregator(new DelimitedLineAggregator<BestGameALLConsole>() {
-            {
-                setDelimiter(",");
-                setFieldExtractor(new BeanWrapperFieldExtractor<BestGameALLConsole>() {
-                    {
-                        setNames(new String[] {  "Metascore", "NameGame","NameConsole", "Userscore", "NameCompany", "Fecha" });
-                    }
-                });
-            }
-        });
-        
-        writer.setHeaderCallback(new FlatFileHeaderCallback() {
-			@Override
-			public void writeHeader(Writer writer) throws IOException {
-				 writer.write("Metascore,NameGame,NameConsole,Userscore,NameCompany,Fecha");
-				
-			}
-        });
-        
-        return writer;
-    }
-	
-	@Bean
-	public TESTPROCESSOR TESTPRO() {
-		return new TESTPROCESSOR();
-	}
 	
 }
 	
