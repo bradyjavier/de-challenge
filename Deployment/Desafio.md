@@ -23,7 +23,7 @@ docker run --rm -v $(pwd)/data:/data spring-etl-docker
 Ejecución del container para versiones windows.
 
 ```
-docker run -v path_raiz_proyecto/data:/data spring-etl-docker
+docker run --rm -v path_raiz_proyecto/data:/data spring-etl-docker
 ```
 
 Para la correcta ejecución y generación de los resultados, es necesario notificar el path raíz del proyecto. Para versiones unix basta con estar en la raíz del proyecto y el comando $(pwd) entregara la ruta correspondiente, para casos de windows es necesario notificar la ruta completa de la raíz del proyecto.
