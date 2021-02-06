@@ -18,7 +18,7 @@ Luego de la creación de la imagen de docker es necesario ejecutar la siguiente 
 Ejecución del container para versiones unix.
 
 ```
-docker run -v $(pwd)/data:/data spring-etl-docker
+docker run --rm -v $(pwd)/data:/data spring-etl-docker
 ```
 Ejecución del container para versiones windows.
 
